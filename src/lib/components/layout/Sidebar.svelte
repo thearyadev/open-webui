@@ -47,6 +47,10 @@
 
 	let showDeleteConfirm = false;
 	let showDropdown = false;
+	let limit = 20;
+	let skip = 0;
+	let scrollLoad = false;
+	let tagFiltered = false; 
 
 	let filteredChatList = [];
 
@@ -84,7 +88,7 @@
 		showSidebar.set(window.innerWidth > BREAKPOINT);
 
 		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
-		await chats.set(await getChatList(localStorage.token));
+		await chats.set(await getChatList(localStorage.token, 20, 0));
 
 		let touchstart;
 		let touchend;
@@ -185,7 +189,13 @@
 				await tick();
 				goto('/');
 			}
-			await chats.set(await getChatList(localStorage.token));
+			
+			// sidebar is paginated. When deleting a chat, only reload the number of chats that the user has already scrolled to. 
+			await chats.set(await getChatList(localStorage.token, limit*skip));
+			
+
+
+
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
 	};
@@ -431,11 +441,13 @@
 						<button
 							class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
 							on:click={async () => {
+								skip = 0
 								let chatIds = await getChatListByTagName(localStorage.token, tag.name);
 								if (chatIds.length === 0) {
 									await tags.set(await getAllChatTags(localStorage.token));
 									chatIds = await getChatList(localStorage.token);
 								}
+								tagFiltered = true;
 								await chats.set(chatIds);
 							}}
 						>
@@ -477,7 +489,22 @@
 				</div>
 			{/if}
 
-			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden">
+			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden"
+				on:scroll={(e) => {
+					if (e.target.scrollTop + e.target.clientHeight >= e.target.scrollHeight - 400 && !scrollLoad && !tagFiltered) {
+						// Load more chats
+						scrollLoad = true;
+						skip += 1;
+						console.log(`skip: ${skip}`)
+						console.log(`limit: ${limit}`)
+						console.log('Loading more chats');
+						getChatList(localStorage.token, limit, skip).then((moreChats) => {
+							chats.set([...$chats, ...moreChats]);
+							scrollLoad = false;
+						});
+					}}}
+				>
+				<h1>{filteredChatList.length}</h1>
 				{#each filteredChatList as chat, idx}
 					{#if idx === 0 || (idx > 0 && chat.time_range !== filteredChatList[idx - 1].time_range)}
 						<div
