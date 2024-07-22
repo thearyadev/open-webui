@@ -240,9 +240,10 @@ class ChatTable:
                 query = query.filter_by(archived=False)
             all_chats = (
                 query.order_by(Chat.updated_at.desc())
-                # .limit(limit).offset(skip)
+                .limit(limit).offset(skip)
                 .all()
             )
+            print(len(all_chats))
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chat_list_by_chat_ids(
