@@ -6,6 +6,7 @@
 	import { splitStream } from '$lib/utils';
 	import { tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import Fuse from 'fuse.js';
 
 	const i18n = getContext('i18n');
 
@@ -20,11 +21,18 @@
 	let selectedIdx = 0;
 	let filteredModels = [];
 
-	$: filteredModels = $models
-		.filter((p) =>
-			p.name.toLowerCase().includes(prompt.toLowerCase().split(' ')?.at(0)?.substring(1) ?? '')
-		)
-		.sort((a, b) => a.name.localeCompare(b.name));
+	//$: filteredModels = $models
+	//		.filter((p) =>
+	//			p.name.toLowerCase().includes(prompt.toLowerCase().split(' ')?.at(0)?.substring(1) ?? '')
+	//	)
+	//	.sort((a, b) => a.name.localeCompare(b.name));
+
+	const fuse = new Fuse($models, {
+		keys: ['name']
+	});
+	$: filteredModels = fuse.search(prompt.replace('@', '')).map((e) => {
+		return e.item;
+	});
 
 	$: if (prompt) {
 		selectedIdx = 0;
